@@ -31,7 +31,7 @@ const renderer = new THREE.WebGLRenderer({
 })
 renderer.setSize(sizes.width, sizes.height)
 
-/*
+
 //Animations with delta time
 //Time
 let time = Date.now()
@@ -58,8 +58,8 @@ const tick = () => {
     renderer.render(scene, camera);
 
     window.requestAnimationFrame(tick);
-}*/
-
+}
+/* 
 //Animations with clock
 //clock
 
@@ -84,7 +84,7 @@ const tick = () => {
     renderer.render(scene, camera);
 
     window.requestAnimationFrame(tick);
-}
+} */
 
 tick()
 
