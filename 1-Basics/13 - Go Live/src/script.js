@@ -34,6 +34,7 @@ fontLoader.load(
     {
         // Material
         const material = new THREE.MeshMatcapMaterial({ matcap: matcapTexture })
+        //material.wireframe = true;
 
         // Text
         const textGeometry = new TextGeometry(
@@ -42,12 +43,12 @@ fontLoader.load(
                 font: font,
                 size: 0.5,
                 depth: 0.2,
-                curveSegments: 12,
+                curveSegments: 6,
                 bevelEnabled: true,
                 bevelThickness: 0.03,
                 bevelSize: 0.02,
                 bevelOffset: 0,
-                bevelSegments: 5
+                bevelSegments: 2
             }
         )
         textGeometry.center()
@@ -56,7 +57,7 @@ fontLoader.load(
         scene.add(text)
 
         // Donuts
-        const donutGeometry = new THREE.TorusGeometry(0.3, 0.2, 32, 64)
+        const donutGeometry = new THREE.TorusGeometry(0.3, 0.2, 8, 16)
 
         for(let i = 0; i < 100; i++)
         {

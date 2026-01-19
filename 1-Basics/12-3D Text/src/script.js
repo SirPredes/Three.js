@@ -52,7 +52,24 @@ const textGeometry = new TextGeometry('Hola!', {
     bevelOffset: 0,
     bevelSegments: 2
 });
-
+/* Per alguna rao lo d'abaix funciona a escala petita pero lo d'adalt no (es es dodi de sa lliço seguent)
+// Text
+        const textGeometry = new TextGeometry(
+            'Hello Three.js',
+            {
+                font: font,
+                size: 0.5,
+                depth: 0.2,
+                curveSegments: 6,
+                bevelEnabled: true,
+                bevelThickness: 0.03,
+                bevelSize: 0.02,
+                bevelOffset: 0,
+                bevelSegments: 2
+            }
+        )
+        textGeometry.center()
+ */
 //CENTERING THE TEXT (Hard way)
 
 /* //By default we have a spherical compute bounding, so we want it to be a box
