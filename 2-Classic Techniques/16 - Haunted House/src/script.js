@@ -30,6 +30,9 @@ import { Sky } from 'three/addons/objects/Sky.js'
  *      - Finalment afegim sa boira, que podem trobar en dos tipus: fog i fogExp2, sa segona 
  *          es mes realista i mes senzilla, no se si sa primera rendeix menos o que pero sa 
  *          segona va joya
+ *      - Tema optimització, lo millor és utilitzar textures en format webp ja que 
+ *          pesen molt menys i ofereixen una qualitat quasi igual. Ho agraira es bandwith 
+ *          i sa performance 
  * 
  */
 
