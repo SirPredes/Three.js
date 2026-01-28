@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import GUI from 'lil-gui'
+import { GLTFLoader } from 'three/examples/jsm/Addons.js'
+import { DRACOLoader } from 'three/examples/jsm/Addons.js'
 
 /**
  * Base
@@ -13,6 +15,91 @@ const canvas = document.querySelector('canvas.webgl')
 
 // Scene
 const scene = new THREE.Scene()
+
+/**
+ * Models
+ */
+const dracoLoader = new DRACOLoader() // Nomes l'emplearia si els models son mes pesats. En aquest cas
+                                      // estalviam nomes 60Kb i no hi hauria molta diferencia (s'ha de 
+                                      // veure en cada cas)
+
+dracoLoader.setDecoderPath('/draco/') //IMPORTANT: Aixo es per a que es dracoLoader pugui emplear sa 
+                                      // versio WebAssembli (més ràpida) i workers (multi-Thread)
+                                      
+const gltfLoader = new GLTFLoader()
+gltfLoader.setDRACOLoader(dracoLoader)// Així li permetem usar es loaader draco per poder accedir a 
+                                      // nes fitxers comprimits en draco
+                                      // D'aquestaa manera no se carrega es decoder draco fins que 
+                                      // no se fa servir (Optimitzacio +1)
+
+/* gltfLoader.load(
+    '/models/Duck/glTF-Draco/Duck.gltf',
+    (gltf) => 
+        {
+            scene.add(gltf.scene.children[0])
+        },
+    () => 
+        {
+            console.log('progress')
+        },
+    (error) => 
+        {
+            console.log(error)
+        },
+) */
+/* gltfLoader.load(
+    '/models/FlightHelmet/glTF/FlightHelmet.gltf',
+    (gltf) => 
+        {
+            //IMPORTANT: Per alguna rao si posam els meshes a una altra escena se borren de s'anterior, aixi 
+            // que no podem fer un for loop. Per aixo empleam un while i treim cada vegada es primer element 
+            // cada pic (Jo crec que es millor pero si se fa malament pot congelar s'explorador)
+            while(gltf.scene.children.length){
+                scene.add(gltf.scene.children[0])
+            }
+            // Sino se podria copiar s'arrai de ses meshes i fer un for loop a aquest array (No m'agrada tant)
+            //const children = [...gltf.scene.children]
+            //for(const child of children){
+            //    scene.add(child)
+            //}
+            // Tambe se podria afegir directament s'escena, que entrariaa com un group
+            //scene.add(gltf.scene)
+        },
+    () => 
+        {
+            console.log('progress')
+        },
+    () => 
+        {
+            console.log('error')
+        },
+) */
+
+let mixer = null
+
+gltfLoader.load(
+    '/models/Fox/glTF/Fox.gltf',
+    (gltf) => 
+        {
+            mixer = new THREE.AnimationMixer(gltf.scene)
+            const action = mixer.clipAction(gltf.animations[2])
+
+            action.play()
+
+            console.log(action)
+
+            gltf.scene.scale.set(0.025, 0.025, 0.025)
+            scene.add(gltf.scene)
+        },
+    () => 
+        {
+            console.log('progress')
+        },
+    (error) => 
+        {
+            console.log(error)
+        },
+)
 
 /**
  * Floor
@@ -104,6 +191,11 @@ const tick = () =>
     const elapsedTime = clock.getElapsedTime()
     const deltaTime = elapsedTime - previousTime
     previousTime = elapsedTime
+
+    //Update Mixer
+    if(mixer !== null){
+        mixer.update(deltaTime)
+    }
 
     // Update controls
     controls.update()
