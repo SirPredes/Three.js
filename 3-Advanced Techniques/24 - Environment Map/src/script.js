@@ -129,6 +129,10 @@ scene.environment = cubeRenderTarget.texture
 //Cube camera
 const cubeCamera = new THREE.CubeCamera(0.1, 100, cubeRenderTarget)
 
+//Layers
+// Ses capes se poden aplicar a qualsevol cosa i permeten que els altres elements de s'escena
+// nomes vegin es de sa mateixa capa. Ses coses poden estar a més d'unaa capa sa vegada.
+// NO FUNCIONEN AMB LLUMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 cubeCamera.layers.set(1)
 holyDonut.layers.enable(1)
 
