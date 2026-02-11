@@ -1,6 +1,11 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import GUI from 'lil-gui'
+import testVertexShader from './Shaders/test/vertex.glsl' //Per aixo s'ha de instalar plugin vite-plugin-glsl u fer cabvus a vite.config.js
+import testFragmentShader from './Shaders/test/fragment.glsl'
+
+// console.log(testVertexShader)
+// console.log(testFragmentShader)
 
 /**
  * Base
@@ -18,6 +23,7 @@ const scene = new THREE.Scene()
  * Textures
  */
 const textureLoader = new THREE.TextureLoader()
+const flagTexture = textureLoader.load('/textures/flag-french.jpg')
 
 /**
  * Test mesh
@@ -25,11 +31,35 @@ const textureLoader = new THREE.TextureLoader()
 // Geometry
 const geometry = new THREE.PlaneGeometry(1, 1, 32, 32)
 
+const count = geometry.attributes.position.count
+const randoms = new Float32Array(count)
+
+for (let i = 0; i < count; i++) {
+    randoms[i] = Math.random()
+}
+
 // Material
-const material = new THREE.MeshBasicMaterial()
+const material = new THREE.ShaderMaterial({ //We've also used RawShaderMaterial before
+    vertexShader: testVertexShader,
+    fragmentShader: testFragmentShader,
+    uniforms: {
+        uFrequency: { value: new THREE.Vector2(10, 5) },
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color('turquoise') },
+        uTexture: { value: flagTexture }
+    },
+    transparent: true,
+    side: THREE.DoubleSide
+})
+
+gui.add(material.uniforms.uFrequency.value, 'x').min(0).max(20).step(0.01).name('frquencyX')
+gui.add(material.uniforms.uFrequency.value, 'y').min(0).max(20).step(0.01).name('frquencyY')
+
+geometry.setAttribute('aRandom', new THREE.BufferAttribute(randoms, 1)) //aRandom stands for attribute (u if it is uniform)
 
 // Mesh
 const mesh = new THREE.Mesh(geometry, material)
+mesh.scale.y = 2/3
 scene.add(mesh)
 
 /**
@@ -84,6 +114,9 @@ const clock = new THREE.Clock()
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
+
+    //Update material
+    material.uniforms.uTime.value = elapsedTime
 
     // Update controls
     controls.update()
