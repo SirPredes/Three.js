@@ -6,6 +6,7 @@ import Renderer from "./Renderer"
 import World from "./World/World"
 import Resources from "./Utils/Resources"
 import sources from "./Sources.js"
+import Debug from "./Utils/Debug.js"
 
 let instance = null
 
@@ -19,6 +20,7 @@ export default class Experience{
     world
     resources
     sources
+    debug
 
     constructor(canvas){
         if(instance){   //Aixo fa que sigui un Singleton (Clase que no pot esser instanciada, nomes pot tenir una instancia)
@@ -33,6 +35,7 @@ export default class Experience{
         this.canvas = canvas
 
         //Setup
+        this.debug = new Debug()
         this.sizes = new Sizes()
         this.time = new Time()
         this.scene = new THREE.Scene()
@@ -56,6 +59,36 @@ export default class Experience{
 
     update(){
         this.camera.update() //Primer sa camara perque sino va un fotograma per darrere
+        this.world.update()
         this.renderer.update()
+    }
+
+    destroy(){ //Per projectes mes complexes igual s'ha de fer un metode destroy per cada classe (Most times)
+        this.sizes.off('resize')
+        this.time.off('tick')
+
+        //Traverse the scene
+        this.scene.traverse((child) => {
+            if(child instanceof THREE.Mesh){
+                child.geometry.dispose()
+
+                for(const key in child.material){
+                    const value = child.material[key]
+                    if(value && typeof value.dispose === 'function'){
+                        value.dispose()
+                    }
+                }
+            }
+        })
+
+        if(this.debug.active){
+            this.debug.ui.destroy()
+        }
+
+        removeEventListener('resize', Sizes) //No se si se fa aixi...
+
+        this.camera.controls.dispose()
+        this.renderer.instance.dispose()
+        //Aqui tambe eliminariem EffectComposer i WebGLRenderTarget
     }
 }
