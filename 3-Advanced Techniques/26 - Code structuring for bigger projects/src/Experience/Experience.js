@@ -29,7 +29,7 @@ export default class Experience{
 
         instance = this
         //To give global access to this class (opcional pero a vegades util)
-        window.experience = this
+        //window.experience = this
 
         //Options
         this.canvas = canvas
