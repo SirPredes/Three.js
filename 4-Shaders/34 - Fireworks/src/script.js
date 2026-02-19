@@ -1,6 +1,9 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import GUI from 'lil-gui'
+import fireworkVertexShader from './shaders/firework/vertex.glsl'
+import fireworkFragmentShader from './shaders/firework/fragment.glsl'
+import gsap from 'gsap'
 
 /**
  * Base
@@ -22,21 +25,27 @@ const textureLoader = new THREE.TextureLoader()
  */
 const sizes = {
     width: window.innerWidth,
-    height: window.innerHeight
+    height: window.innerHeight,
+    pixelRatio: Math.min(window.devicePixelRatio, 2)
 }
+sizes.resolution = new THREE.Vector2(sizes.width * sizes.pixelRatio, sizes.height * sizes.pixelRatio) 
+                                                    // No ho podem posar dedins perque no pot accedir 
+                                                    //a height.. perque encara no s'han creat tecnicament
 
 window.addEventListener('resize', () =>
 {
     // Update sizes
     sizes.width = window.innerWidth
     sizes.height = window.innerHeight
+    sizes.pixelRatio = Math.min(window.devicePixelRatio, 2)
+    sizes.resolution.set(sizes.width, sizes.height)
 
     // Update camera
     camera.aspect = sizes.width / sizes.height
     camera.updateProjectionMatrix()
 
     // Update renderer
-    renderer.setSize(sizes.width, sizes.height)
+    renderer.setSize(sizes.width * sizes.pixelRatio, sizes.height * sizes.pixelRatio)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
 
@@ -60,16 +69,114 @@ const renderer = new THREE.WebGLRenderer({
     antialias: true
 })
 renderer.setSize(sizes.width, sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setPixelRatio(sizes.pixelRatio)
 
 /**
- * Test
+ * Fireworks
  */
-const test = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial()
+const textures = [
+    textureLoader.load('./particles/1.png'),
+    textureLoader.load('./particles/2.png'),
+    textureLoader.load('./particles/3.png'),
+    textureLoader.load('./particles/4.png'),
+    textureLoader.load('./particles/5.png'),
+    textureLoader.load('./particles/6.png'),
+    textureLoader.load('./particles/7.png'),
+    textureLoader.load('./particles/8.png'),
+]
+
+const createFirework = (count, position, size, texture, radius, color) => {
+    //Geometry
+    const positionsArray = new Float32Array(count * 3)
+    const sizesArray = new Float32Array(count)
+
+
+    for (let i = 0; i < count; i++) {
+        const i3 = i * 3
+
+        const spherical = new THREE.Spherical(
+            radius * (0.75 + Math.random() * 0.25), //So the particles are placed on the 25% outer layer of the sphere
+            Math.random() * Math.PI,
+            Math.random() * Math.PI * 2
+        )
+        const position = new THREE.Vector3()
+        position.setFromSpherical(spherical)
+
+        positionsArray[i3    ] = position.x
+        positionsArray[i3 + 1] = position.y
+        positionsArray[i3 + 2] = position.z
+
+        sizesArray[i] = Math.random()
+    }
+
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positionsArray, 3))
+    geometry.setAttribute('aSize', new THREE.Float32BufferAttribute(positionsArray, 1))
+
+    //Material
+    texture.flipY = false //Sino, per alguna extranya rao, three.js gira s'eix y i sa textura se veuria al reves
+    const material = new THREE.ShaderMaterial({
+        vertexShader: fireworkVertexShader,
+        fragmentShader: fireworkFragmentShader,
+        uniforms: {
+            uSize: new THREE.Uniform(size),
+            uResolution: new THREE.Uniform(sizes.resolution),
+            uTexture: new THREE.Uniform(texture),
+            uColor: new THREE.Uniform(color),
+            uProgress: new THREE.Uniform(0),
+        },
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+    })
+
+    //Points
+    const firework = new THREE.Points(
+        geometry, 
+        material
+    )
+    firework.position.copy(position)
+    scene.add(firework)
+
+    //Destroy
+    const destroy = () => {
+        scene.remove(firework)
+        geometry.dispose()
+        material.dispose()
+    }
+
+    //Animate
+    gsap.to(
+        material.uniforms.uProgress,
+        {
+            value: 1, 
+            duration: 3, 
+            ease: 'linear',
+            onComplete: destroy,
+
+        }
+    )
+}
+
+createFirework(
+    1000,                    //Count
+    new THREE.Vector3(),    //Position
+    0.5,                    //Size
+    textures[7],            //Texture
+    1,                      //Radius of the sphere
+    new THREE.Color('#8affff')
 )
-scene.add(test)
+
+window.addEventListener('click', () => {
+    createFirework(
+        1000,                    //Count
+        new THREE.Vector3(),    //Position
+        0.5,                    //Size
+        textures[7],            //Texture
+        1,                      //Radius of the sphere
+        new THREE.Color('#8affff')
+    )
+})
 
 /**
  * Animate
