@@ -77,12 +77,18 @@ renderer.setPixelRatio(sizes.pixelRatio)
 const materialParameters = {}
 materialParameters.color = '#ffffff'
 
+const lightParameters = {}
+lightParameters.lightColor = '#238a34'
+lightParameters.lightIntensity = 0.03
+
 const material = new THREE.ShaderMaterial({
     vertexShader: shadingVertexShader,
     fragmentShader: shadingFragmentShader,
     uniforms:
     {
         uColor: new THREE.Uniform(new THREE.Color(materialParameters.color)),
+        uLightColor: new THREE.Uniform(new THREE.Color(lightParameters.lightColor)),
+        uLightIntensity: new THREE.Uniform(lightParameters.lightIntensity)
     }
 })
 
@@ -91,7 +97,24 @@ gui
     .onChange(() =>
     {
         material.uniforms.uColor.value.set(materialParameters.color)
-    })
+    }
+)
+gui
+    .addColor(lightParameters, 'lightColor')
+    .onChange(() =>
+    {
+        material.uniforms.uLightColor.value.set(lightParameters.lightColor)
+    }
+)
+gui
+    .add(lightParameters, 'lightIntensity')
+    .min(0)
+    .max(1)
+    .step(0.01)
+    .onChange(() => {
+        material.uniforms.uLightIntensity.value = lightParameters.lightIntensity
+    }
+)
 
 /**
  * Objects
@@ -127,6 +150,29 @@ gltfLoader.load(
         scene.add(suzanne)
     }
 )
+
+/**
+ * Light helpers
+ */
+const directionalLightHelper = new THREE.Mesh(
+    new THREE.PlaneGeometry(),
+    new THREE.MeshBasicMaterial()
+)
+directionalLightHelper.material.color.setRGB(0.1, 0.1, 1)
+directionalLightHelper.material.side = THREE.DoubleSide
+directionalLightHelper.position.set(0, 0, 3)
+scene.add(directionalLightHelper)
+
+const pointLightHelper = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(0.1, 2),
+    new THREE.MeshBasicMaterial()
+)
+pointLightHelper.material.color.setRGB(1, 0.1, 0.1)
+pointLightHelper.material.side = THREE.DoubleSide
+pointLightHelper.position.set(0, 2.5, 0)
+scene.add(pointLightHelper)
+
+
 
 /**
  * Animate
