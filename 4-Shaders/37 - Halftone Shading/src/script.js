@@ -118,6 +118,7 @@ gui
     .min(1)
     .max(300)
     .step(1)
+    .name('ShadowRepetitions')
 
 gui
     .addColor(materialParameters, 'shadowColor')
@@ -131,6 +132,7 @@ gui
     .min(1)
     .max(300)
     .step(1)
+    .name('LightRepetitions')
 
 gui
     .addColor(materialParameters, 'lightColor')
