@@ -2,9 +2,12 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
+import { GPUComputationRenderer } from 'three/examples/jsm/Addons.js'
 import GUI from 'lil-gui'
 import particlesVertexShader from './shaders/particles/vertex.glsl'
 import particlesFragmentShader from './shaders/particles/fragment.glsl'
+import gpgpuParticlesShader from './shaders/gpgpu/particles.glsl'
+
 
 /**
  * Base
@@ -80,12 +83,98 @@ debugObject.clearColor = '#29191f'
 renderer.setClearColor(debugObject.clearColor)
 
 /**
+ * Load Model
+ */
+const gltf = await gltfLoader.loadAsync('./model.glb') //Haurem de fer canvis a nes vite.config
+//Esta be, pero a mes de haver de canviar vite, sa pagina se mostrara en blanc durant sa carrega
+
+
+/**
+ * Geometry
+ */
+const baseGeometry = {}
+baseGeometry.instance = gltf.scene.children[0].geometry
+baseGeometry.count = baseGeometry.instance.attributes.position.count 
+//console.log(baseGeometry.instance.attributes.color)
+
+/**
+ * GPU Compute
+ */
+//Setup
+const gpgpu = {}
+gpgpu.size = Math.ceil(Math.sqrt(baseGeometry.count))
+gpgpu.computation = new GPUComputationRenderer(gpgpu.size, gpgpu.size, renderer)
+
+//Base particles
+const baseParticlesTexture = gpgpu.computation.createTexture()
+
+ for (let i = 0; i < baseGeometry.count; i++) {
+    const i3 = i * 3
+    const i4 = i * 4
+
+    //Position based on Geometry
+    baseParticlesTexture.image.data[i4 + 0] = baseGeometry.instance.attributes.position.array[i3 + 0]
+    baseParticlesTexture.image.data[i4 + 1] = baseGeometry.instance.attributes.position.array[i3 + 1]
+    baseParticlesTexture.image.data[i4 + 2] = baseGeometry.instance.attributes.position.array[i3 + 2]
+    baseParticlesTexture.image.data[i4 + 3] = Math.random()
+ }
+
+//Particles Variable
+gpgpu.particlesVariable = gpgpu.computation.addVariable('uParticles', gpgpuParticlesShader, baseParticlesTexture)
+gpgpu.computation.setVariableDependencies(gpgpu.particlesVariable, [ gpgpu.particlesVariable ])
+
+//Uniforms
+gpgpu.particlesVariable.material.uniforms.uTime =  new THREE.Uniform(0)
+gpgpu.particlesVariable.material.uniforms.uBase =  new THREE.Uniform(baseParticlesTexture)
+gpgpu.particlesVariable.material.uniforms.uDeltaTime =  new THREE.Uniform(0)
+gpgpu.particlesVariable.material.uniforms.uFlowFieldInfluence =  new THREE.Uniform(0.5)
+gpgpu.particlesVariable.material.uniforms.uFlowFieldStrength =  new THREE.Uniform(2)
+gpgpu.particlesVariable.material.uniforms.uFlowFieldFrequency =  new THREE.Uniform(0.5)
+
+
+//Init
+gpgpu.computation.init()
+
+// Debug
+gpgpu.debug = new THREE.Mesh(
+    new THREE.PlaneGeometry(3, 3),
+    new THREE.MeshBasicMaterial({ map: gpgpu.computation.getCurrentRenderTarget(gpgpu.particlesVariable).texture })
+)
+gpgpu.debug.position.x = 3
+gpgpu.debug.visible = false
+scene.add(gpgpu.debug)
+
+/**
  * Particles
  */
 const particles = {}
 
-// Geometry
-particles.geometry = new THREE.SphereGeometry(3)
+//Geometry
+const particlesUvArray = new Float32Array(baseGeometry.count * 2)
+const sizesArray = new Float32Array(baseGeometry.count)
+
+for(let y = 0; y < gpgpu.size; y++){
+    for(let x = 0; x < gpgpu.size; x++){
+        const i = (y * gpgpu.size + x)
+        const i2 = i * 2
+
+        // Particles UV
+        const uvX = (x + 0.5) / gpgpu.size
+        const uvY = (y + 0.5) / gpgpu.size
+
+        particlesUvArray[i2 + 0] = uvX;
+        particlesUvArray[i2 + 1] = uvY;
+
+        //Size
+        sizesArray[i] = Math.random()
+    }
+}
+
+particles.geometry = new THREE.BufferGeometry()
+particles.geometry.setDrawRange(0, baseGeometry.count)
+particles.geometry.setAttribute('aParticlesUv', new THREE.BufferAttribute(particlesUvArray, 2))
+particles.geometry.setAttribute('aColor', baseGeometry.instance.attributes.color)
+particles.geometry.setAttribute('aSize', new THREE.BufferAttribute(sizesArray, 1))
 
 // Material
 particles.material = new THREE.ShaderMaterial({
@@ -93,8 +182,9 @@ particles.material = new THREE.ShaderMaterial({
     fragmentShader: particlesFragmentShader,
     uniforms:
     {
-        uSize: new THREE.Uniform(0.4),
-        uResolution: new THREE.Uniform(new THREE.Vector2(sizes.width * sizes.pixelRatio, sizes.height * sizes.pixelRatio))
+        uSize: new THREE.Uniform(0.07),
+        uResolution: new THREE.Uniform(new THREE.Vector2(sizes.width * sizes.pixelRatio, sizes.height * sizes.pixelRatio)),
+        uParticlesTexture: new THREE.Uniform(),
     }
 })
 
@@ -108,6 +198,23 @@ scene.add(particles.points)
 gui.addColor(debugObject, 'clearColor').onChange(() => { renderer.setClearColor(debugObject.clearColor) })
 gui.add(particles.material.uniforms.uSize, 'value').min(0).max(1).step(0.001).name('uSize')
 
+gui
+    .add(gpgpu.particlesVariable.material.uniforms.uFlowFieldInfluence, 'value')
+    .min(0)
+    .max(1)
+    .name('uFlowFieldInfluence')
+gui
+    .add(gpgpu.particlesVariable.material.uniforms.uFlowFieldStrength, 'value')
+    .min(0)
+    .max(10)
+    .name('uFlowFieldStrength')
+gui
+    .add(gpgpu.particlesVariable.material.uniforms.uFlowFieldFrequency, 'value')
+    .min(0)
+    .max(1)
+    .step(0.001)
+    .name('uFlowFieldFrequency')
+
 /**
  * Animate
  */
@@ -117,11 +224,20 @@ let previousTime = 0
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
-    const deltaTime = elapsedTime - previousTime
+    const deltaTime = elapsedTime - previousTime //Per evitar bugs amb delta times molt grans quan sortim de sa pestanya,
+                                                // podem fer servir min(elapsedTime - previousTime, 1/30). Així, mai arribara
+                                                //a ser tan gros, sino, a nes shader podem fer mod() des valor
     previousTime = elapsedTime
     
     // Update controls
     controls.update()
+
+    // GPGPU Update
+    gpgpu.particlesVariable.material.uniforms.uTime.value = elapsedTime
+    gpgpu.particlesVariable.material.uniforms.uDeltaTime.value = deltaTime
+    gpgpu.computation.compute()
+                    //Aixo es perque com THREE usa es pingpong FBO, nosaltres volem s'ultim que s'ha dibuixat, per lo que ha d'estar a nes tick
+    particles.material.uniforms.uParticlesTexture.value = gpgpu.computation.getCurrentRenderTarget(gpgpu.particlesVariable).texture
 
     // Render normal scene
     renderer.render(scene, camera)
