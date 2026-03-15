@@ -4,7 +4,10 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import GUI from 'lil-gui'
-
+import CustomShaderMaterial from 'three-custom-shader-material/vanilla'
+import wobbleVertexShader from './shaders/wobble/vertex.glsl'
+import wobbleFragmentShader from './shaders/wobble/fragment.glsl'
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 /**
  * Base
  */
@@ -39,8 +42,33 @@ rgbeLoader.load('./urban_alley_01_1k.hdr', (environmentMap) =>
 /**
  * Wobble
  */
+
+debugObject.colorA = '#0000ff'
+debugObject.colorB = '#ff0000'
+
+const uniforms = {
+    uTime: new THREE.Uniform(0),
+
+    uPositionFrequency: new THREE.Uniform(0.5),
+    uTimeFrequency: new THREE.Uniform(0.4),
+    uStrength: new THREE.Uniform(0.3),
+
+    uWarpPositionFrequency: new THREE.Uniform(0.38),
+    uWarpTimeFrequency: new THREE.Uniform(0.12),
+    uWarpStrength: new THREE.Uniform(1.7),
+
+    uColorA: new THREE.Uniform(new THREE.Color(debugObject.colorA)),
+    uColorB: new THREE.Uniform(new THREE.Color(debugObject.colorB))
+}
 // Material
-const material = new THREE.MeshPhysicalMaterial({
+const material = new CustomShaderMaterial({
+    //CSM
+    baseMaterial: THREE.MeshPhysicalMaterial,
+    vertexShader: wobbleVertexShader,
+    fragmentShader: wobbleFragmentShader,
+    uniforms: uniforms,
+
+    //MeshPhysicalMaterial
     metalness: 0,
     roughness: 0.5,
     color: '#ffffff',
@@ -51,22 +79,58 @@ const material = new THREE.MeshPhysicalMaterial({
     wireframe: false
 })
 
+const depthMaterial = new CustomShaderMaterial({
+    //CSM
+    baseMaterial: THREE.MeshDepthMaterial,
+    vertexShader: wobbleVertexShader,
+    uniforms: uniforms,
+    //fragmentShader: wobbleFragmentShader, //No fa falta a nes depth
+
+    //MeshDepthMaterial
+    depthPacking: THREE.RGBADepthPacking //Aixi usa depthPacking, una tecnica que usa tots els 4canals 
+                                         //en vers de una escala de grisos
+})
+
 // Tweaks
+gui.add(uniforms.uPositionFrequency, 'value', 0, 2, 0.001).name('uPositionFrequency')
+gui.add(uniforms.uTimeFrequency, 'value', 0, 2, 0.001).name('uTimeFrequency')
+gui.add(uniforms.uStrength, 'value', 0, 2, 0.001).name('uStrength')
+
+gui.add(uniforms.uPositionFrequency, 'value', 0, 2, 0.001).name('uWarpPositionFrequency')
+gui.add(uniforms.uTimeFrequency, 'value', 0, 2, 0.001).name('uWarpTimeFrequency')
+gui.add(uniforms.uStrength, 'value', 0, 2, 0.001).name('uWarpStrength')
+
 gui.add(material, 'metalness', 0, 1, 0.001)
 gui.add(material, 'roughness', 0, 1, 0.001)
 gui.add(material, 'transmission', 0, 1, 0.001)
 gui.add(material, 'ior', 0, 10, 0.001)
 gui.add(material, 'thickness', 0, 10, 0.001)
-gui.addColor(material, 'color')
 
-// Geometry
-const geometry = new THREE.IcosahedronGeometry(2.5, 50)
+gui.addColor(debugObject, 'colorA').onChange(() => uniforms.uColorA.value.set(debugObject.colorA))
+gui.addColor(debugObject, 'colorB').onChange(() => uniforms.uColorB.value.set(debugObject.colorB))
 
-// Mesh
-const wobble = new THREE.Mesh(geometry, material)
-wobble.receiveShadow = true
-wobble.castShadow = true
-scene.add(wobble)
+// // Geometry
+// let geometry = new THREE.IcosahedronGeometry(2.5, 50)
+// geometry = mergeVertices(geometry) //
+// geometry.computeTangents()
+
+// // Mesh
+// const wobble = new THREE.Mesh(geometry, material)
+// wobble.customDepthMaterial = depthMaterial
+// wobble.receiveShadow = true
+// wobble.castShadow = true
+// scene.add(wobble)
+
+//Model
+gltfLoader.load('./suzanne.glb', (gltf) => {
+    const wobble = gltf.scene.children[0]
+    wobble.receiveShadow = true
+    wobble.castShadow = true
+    wobble.material = material
+    wobble.depthMaterial = material
+
+    scene.add(wobble)
+})
 
 /**
  * Plane
@@ -151,6 +215,9 @@ const clock = new THREE.Clock()
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
+
+    //Materials
+    uniforms.uTime.value = elapsedTime;
 
     // Update controls
     controls.update()
