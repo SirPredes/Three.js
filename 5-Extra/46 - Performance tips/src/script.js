@@ -1,5 +1,14 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import Stats from 'stats.js'
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+
+/**
+ * Stats
+ */
+const stats = new Stats()
+stats.showPanel(0)
+document.body.appendChild(stats.dom)
 
 /**
  * Base
@@ -56,7 +65,8 @@ controls.enableDamping = true
  */
 const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
-    powerPreference: 'high-performance',
+    powerPreference: 'high-performance', //Amb aixo mos aseguram de que sa gpu que esta empleant es client es sa mes performant
+                                        //Encara aixi no usar a no ser que tenguem performance issues
     antialias: true
 })
 renderer.shadowMap.enabled = true
@@ -74,7 +84,7 @@ const cube = new THREE.Mesh(
 cube.castShadow = true
 cube.receiveShadow = true
 cube.position.set(- 5, 0, 0)
-scene.add(cube)
+// scene.add(cube)
 
 const torusKnot = new THREE.Mesh(
     new THREE.TorusKnotGeometry(1, 0.4, 128, 32),
@@ -82,7 +92,7 @@ const torusKnot = new THREE.Mesh(
 )
 torusKnot.castShadow = true
 torusKnot.receiveShadow = true
-scene.add(torusKnot)
+// scene.add(torusKnot)
 
 const sphere = new THREE.Mesh(
     new THREE.SphereGeometry(1, 32, 32),
@@ -91,7 +101,7 @@ const sphere = new THREE.Mesh(
 sphere.position.set(5, 0, 0)
 sphere.castShadow = true
 sphere.receiveShadow = true
-scene.add(sphere)
+// scene.add(sphere)
 
 const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(10, 10),
@@ -101,18 +111,18 @@ floor.position.set(0, - 2, 0)
 floor.rotation.x = - Math.PI * 0.5
 floor.castShadow = true
 floor.receiveShadow = true
-scene.add(floor)
+// scene.add(floor)
 
 /**
  * Lights
  */
-const directionalLight = new THREE.DirectionalLight('#ffffff', 3)
-directionalLight.castShadow = true
-directionalLight.shadow.mapSize.set(1024, 1024)
-directionalLight.shadow.camera.far = 15
-directionalLight.shadow.normalBias = 0.05
-directionalLight.position.set(0.25, 3, 2.25)
-scene.add(directionalLight)
+// const directionalLight = new THREE.DirectionalLight('#ffffff', 3)
+// directionalLight.castShadow = true
+// directionalLight.shadow.mapSize.set(1024, 1024)
+// directionalLight.shadow.camera.far = 15
+// directionalLight.shadow.normalBias = 0.05
+// directionalLight.position.set(0.25, 3, 2.25)
+// scene.add(directionalLight)
 
 /**
  * Animate
@@ -121,6 +131,10 @@ const clock = new THREE.Clock()
 
 const tick = () =>
 {
+    //Stats
+    stats.begin()
+    
+    //Time
     const elapsedTime = clock.getElapsedTime()
 
     // Update test mesh
@@ -134,6 +148,8 @@ const tick = () =>
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)
+
+    stats.end()
 }
 
 tick()
@@ -143,14 +159,17 @@ tick()
  */
 
 // // Tip 4
-// console.log(renderer.info)
+// console.log(renderer.info) //Aixo te pot servir per veure quantes geometries , textures, triangles hi a a sa escena
 
 // // Tip 6
 // scene.remove(cube)
 // cube.geometry.dispose()
 // cube.material.dispose()
 
-// // Tip 10
+// // Tip 10 ç
+//Evitar llevaar i posar llums, ja que es materials que fan servir s'hauran de recompilar i es costos. Millor moure ses 
+//que ja hi estan perque en termes de performance sera molt millor
+//Si se pot, fer servir baked lights and shadows ja que sera molt millor per sa performance
 // directionalLight.shadow.camera.top = 3
 // directionalLight.shadow.camera.right = 6
 // directionalLight.shadow.camera.left = - 6
@@ -174,34 +193,43 @@ tick()
 // floor.castShadow = false
 // floor.receiveShadow = true
 
-// // Tip 12
-// renderer.shadowMap.autoUpdate = false
+// // // Tip 12
+// renderer.shadowMap.autoUpdate = false //Per exemple si es sol es inmobil, no fara falta fer servir aixo, pero ses sombres no se mouran
 // renderer.shadowMap.needsUpdate = true
 
 // // Tip 18
+// const geometries = []
 // for(let i = 0; i < 50; i++)
 // {
 //     const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5)
 
-//     const material = new THREE.MeshNormalMaterial()
-    
-//     const mesh = new THREE.Mesh(geometry, material)
-//     mesh.position.x = (Math.random() - 0.5) * 10
-//     mesh.position.y = (Math.random() - 0.5) * 10
-//     mesh.position.z = (Math.random() - 0.5) * 10
-//     mesh.rotation.x = (Math.random() - 0.5) * Math.PI * 2
-//     mesh.rotation.y = (Math.random() - 0.5) * Math.PI * 2
+//     geometry.rotateX((Math.random() - 0.5) * Math.PI * 2)
+//     geometry.rotateY((Math.random() - 0.5) * Math.PI * 2)
 
-//     scene.add(mesh)
+//     geometry.translate(
+//         (Math.random() - 0.5) * 10,
+//         (Math.random() - 0.5) * 10,
+//         (Math.random() - 0.5) * 10,
+//     )
+//     geometries.push(geometry)
 // }
 
+// const mergedGeometry = BufferGeometryUtils.mergeGeometries(geometries)
+
+// const material = new THREE.MeshNormalMaterial()
+    
+// const mesh = new THREE.Mesh(mergedGeometry, material)
+
+// scene.add(mesh)
+
 // // Tip 19
+
+// const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5)
+
+// const material = new THREE.MeshNormalMaterial()
+
 // for(let i = 0; i < 50; i++)
 // {
-//     const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5)
-
-//     const material = new THREE.MeshNormalMaterial()
-    
 //     const mesh = new THREE.Mesh(geometry, material)
 //     mesh.position.x = (Math.random() - 0.5) * 10
 //     mesh.position.y = (Math.random() - 0.5) * 10
@@ -233,79 +261,111 @@ tick()
 // const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5)
 
 // const material = new THREE.MeshNormalMaterial()
+
+// const mesh = new THREE.InstancedMesh(geometry, material, 50)
+// mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage) //Better for memory management if the maatrices will be changed in the tick
+
+// scene.add(mesh)
     
 // for(let i = 0; i < 50; i++)
 // {
-//     const mesh = new THREE.Mesh(geometry, material)
-//     mesh.position.x = (Math.random() - 0.5) * 10
-//     mesh.position.y = (Math.random() - 0.5) * 10
-//     mesh.position.z = (Math.random() - 0.5) * 10
-//     mesh.rotation.x = (Math.random() - 0.5) * Math.PI * 2
-//     mesh.rotation.y = (Math.random() - 0.5) * Math.PI * 2
+//     const quaternion = new THREE.Quaternion()
+//     quaternion.setFromEuler(new THREE.Euler(
+//         (Math.random() - 0.5) * Math.PI * 2,
+//         (Math.random() - 0.5) * Math.PI * 2,
+//         0
+//     ))
 
-//     scene.add(mesh)
+//     const position = new THREE.Vector3(
+//         (Math.random() - 0.5) * 10,
+//         (Math.random() - 0.5) * 10,
+//         (Math.random() - 0.5) * 10,
+//     )
+
+//     const matrix = new THREE.Matrix4()
+//     matrix.makeRotationFromQuaternion(quaternion)
+//     matrix.setPosition(position)
+//     mesh.setMatrixAt(i, matrix)
 // }
 
 // // Tip 29
 // renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
 // // Tip 31, 32, 34 and 35
-// const shaderGeometry = new THREE.PlaneGeometry(10, 10, 256, 256)
+const shaderGeometry = new THREE.PlaneGeometry(10, 10, 256, 256)
 
-// const shaderMaterial = new THREE.ShaderMaterial({
-//     uniforms:
-//     {
-//         uDisplacementTexture: { value: displacementTexture },
-//         uDisplacementStrength: { value: 1.5 }
-//     },
-//     vertexShader: `
-//         uniform sampler2D uDisplacementTexture;
-//         uniform float uDisplacementStrength;
+const shaderMaterial = new THREE.ShaderMaterial({
+    precision: 'lowp', //Hi ha lowp, mediump i highp, default se fa servir medium, pero amb lowp millor performance
+    uniforms: //Els uniforms estan be per canviar els valors amb tweaks, pero son dolents per sa performance, millor 
+    //         // emplear defines 
+    {
+        uDisplacementTexture: { value: displacementTexture },
+    //     uDisplacementStrength: { value: 1.5 }
+    },
+    defines: { //Aqui mes comode pero si ho canviam se tornara a carregar tot aixi que millor no canviar
+        DISPLACEMENT_STRENGTH: 2.5,
+    },
+    vertexShader: ` //A nes shaders millor evitar if statements i fer bon us de swizzle i ses built-in functions
+                    //Tambe usar textures millor que perlin noise o similar
+        #define uDisplacementStrength 1.5
 
-//         varying vec2 vUv;
+        uniform sampler2D uDisplacementTexture;
 
-//         void main()
-//         {
-//             vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+        varying vec3 vColor;
 
-//             float elevation = texture2D(uDisplacementTexture, uv).r;
-//             if(elevation < 0.5)
-//             {
-//                 elevation = 0.5;
-//             }
+        void main()
+        {
+            vec4 modelPosition = modelMatrix * vec4(position, 1.0);
 
-//             modelPosition.y += elevation * uDisplacementStrength;
+            float elevation = texture2D(uDisplacementTexture, uv).r;
+            // if(elevation < 0.5)
+            // {
+            //     elevation = 0.5;
+            // }
+            modelPosition.y += clamp(elevation, 0.5, 1.0) * uDisplacementStrength;
 
-//             gl_Position = projectionMatrix * viewMatrix * modelPosition;
+            gl_Position = projectionMatrix * viewMatrix * modelPosition;
 
-//             vUv = uv;
-//         }
-//     `,
-//     fragmentShader: `
-//         uniform sampler2D uDisplacementTexture;
+            vec3 depthColor = vec3(1.0, 0.1, 0.1); //Aixo en vera tambe ho podriem posar directament a nes mix sense variable
+            vec3 surfaceColor = vec3(0.1, 0.0, 0.5);
+            vec3 finalColor = mix(depthColor, surfaceColor, max(elevation, 0.25));
 
-//         varying vec2 vUv;
+            vColor = finalColor;
+        }
+    `,
+    fragmentShader: `
+        //uniform sampler2D uDisplacementTexture;
 
-//         void main()
-//         {
-//             float elevation = texture2D(uDisplacementTexture, vUv).r;
-//             if(elevation < 0.25)
-//             {
-//                 elevation = 0.25;
-//             }
+        //varying vec2 vUv;
+        varying vec3 vColor;
 
-//             vec3 depthColor = vec3(1.0, 0.1, 0.1);
-//             vec3 surfaceColor = vec3(0.1, 0.0, 0.5);
-//             vec3 finalColor = vec3(0.0);
-//             finalColor.r += depthColor.r + (surfaceColor.r - depthColor.r) * elevation;
-//             finalColor.g += depthColor.g + (surfaceColor.g - depthColor.g) * elevation;
-//             finalColor.b += depthColor.b + (surfaceColor.b - depthColor.b) * elevation;
+        void main()
+        {
+            //float elevation = texture2D(uDisplacementTexture, vUv).r;
+            // if(elevation < 0.25)
+            // {
+            //     elevation = 0.25;
+            // }
 
-//             gl_FragColor = vec4(finalColor, 1.0);
-//         }
-//     `
-// })
+            // elevation = max(elevation, 0.25);
 
-// const shaderMesh = new THREE.Mesh(shaderGeometry, shaderMaterial)
-// shaderMesh.rotation.x = - Math.PI * 0.5
-// scene.add(shaderMesh)
+            // vec3 depthColor = vec3(1.0, 0.1, 0.1);
+            // vec3 surfaceColor = vec3(0.1, 0.0, 0.5);
+            // vec3 finalColor = vec3(0.0);
+            // finalColor.r += depthColor.r + (surfaceColor.r - depthColor.r) * elevation;
+            // finalColor.g += depthColor.g + (surfaceColor.g - depthColor.g) * elevation;
+            // finalColor.b += depthColor.b + (surfaceColor.b - depthColor.b) * elevation;
+
+            // vec3 finalColor = mix(depthColor, surfaceColor, elevation);
+
+            gl_FragColor = vec4(vColor, 1.0);
+        }
+    `
+})
+
+const shaderMesh = new THREE.Mesh(shaderGeometry, shaderMaterial)
+shaderMesh.rotation.x = - Math.PI * 0.5
+scene.add(shaderMesh)
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!IMPORTANT: molts de tips de optimitzacio per three.js!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//                                                                      https://discoverthreejs.com/tips-and-tricks/
