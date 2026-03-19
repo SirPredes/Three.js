@@ -1,12 +1,38 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { gsap } from 'gsap'
 
 /**
  * Loaders
  */
-const gltfLoader = new GLTFLoader()
-const cubeTextureLoader = new THREE.CubeTextureLoader()
+const loadingBarElement = document.querySelector('.loading-bar')
+
+const loadingManager = new THREE.LoadingManager(
+    //Loaded
+    () => {
+        // console.log('loaded')
+
+        gsap.delayedCall(0.5, () => {
+            gsap.to(overlayMaterial.uniforms.uAlpha, { duration: 3, value: 0})
+            loadingBarElement.classList.add('ended')
+            loadingBarElement.style.transform = ''
+        })
+        // window.setTimeout(() => {
+        //     gsap.to(overlayMaterial.uniforms.uAlpha, { duration: 3, value: 0})
+        //     loadingBarElement.classList.add('ended')
+        //     loadingBarElement.style.transform = ''
+        // }, 500)
+    },
+    //Progress
+    (itemUrl, itemsLoaded, itemsTotal) => {
+        //console.log(itemUrl, itemsLoaded, itemsTotal)
+        const progressRatio = itemsLoaded / itemsTotal
+        loadingBarElement.style.transform = `scaleX(${progressRatio})`
+    }
+)
+const gltfLoader = new GLTFLoader(loadingManager)
+const cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager)
 
 /**
  * Base
@@ -19,6 +45,33 @@ const canvas = document.querySelector('canvas.webgl')
 
 // Scene
 const scene = new THREE.Scene()
+
+/**
+ * Overlay
+ */
+const overlayGeometry = new THREE.PlaneGeometry(2, 2, 1, 1) //Aqui hem posat un size de 2 perque es clip-space 
+                                                            // va de -1 a 1 i aixi cubreix tota sa pantalla.
+                                                            // Si volguessim que ocupas menys ido, fer que sigui 1x1 o aixi
+const overlayMaterial = new THREE.ShaderMaterial({
+    wireframe: false, //Comprobar que va be
+    transparent: true,
+    uniforms: {
+        uAlpha: new THREE.Uniform(1)
+    },
+    vertexShader: `
+        void main(){
+            gl_Position = vec4(position, 1.0); // Hem eliminat (projectionMatrix * modelViewMatrix *) i ara apuntara sempre a sa camara
+        }
+    `,
+    fragmentShader: `
+        uniform float uAlpha;
+        void main(){
+            gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha);
+        }
+    `
+})
+const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial)
+scene.add(overlay)
 
 /**
  * Update all materials
