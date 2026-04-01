@@ -13,7 +13,7 @@ const loadingManager = new THREE.LoadingManager(
     () => {
         // console.log('loaded')
 
-        gsap.delayedCall(0.5, () => {
+        gsap.delayedCall(0.5, () => { //Aquesta es millor que setTimeout, pero sino esta be tambe sa d'aabaix
             gsap.to(overlayMaterial.uniforms.uAlpha, { duration: 3, value: 0})
             loadingBarElement.classList.add('ended')
             loadingBarElement.style.transform = ''
