@@ -52,7 +52,7 @@ export default function Experience()
                     <Text
                         font='./BitcountGridDouble-Regular.ttf'
                         fontSize={0.5}
-                        position={[2, 1.75, 0.75]}
+                        position={[2, 1.75, 0.25]}
                         rotation-y={-1.25}
                         maxWidth={2}
                     >
