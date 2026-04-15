@@ -1,11 +1,17 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
+const NUM_GRASS = 32 * (2 ** 10) ;
+const GRASS_SEGMENTS = 6;
+const GRASS_VERTICES = (GRASS_SEGMENTS + 1) * 2;
+const GRASS_PATCH_SIZE = 25;
+const GRASS_WIDTH = 0.25;
+const GRASS_HEIGHT = 2;
+
 
 class SimonDevGLSLCourse {
   constructor() {
   }
-
   async initialize() {
     this.threejs_ = new THREE.WebGLRenderer();
     document.body.appendChild(this.threejs_.domElement);
@@ -42,50 +48,52 @@ class SimonDevGLSLCourse {
     this.raf_();
   }
 
-  CreateGeometry_(segments){
+  CreateGeometry_(segments) {
     const VERTICES = (segments + 1) * 2;
     const indices = [];
 
-    for(let i = 0; i < segments; i++){
+    for (let i = 0; i < segments; ++i) {
       const vi = i * 2;
-      indices[i * 12 + 0] = vi + 0;
-      indices[i * 12 + 1] = vi + 1;
-      indices[i * 12 + 2] = vi + 2;
-      
-      indices[i * 12 + 3] = vi + 2;
-      indices[i * 12 + 4] = vi + 1;
-      indices[i * 12 + 5] = vi + 3;
+      indices[i*12+0] = vi + 0;
+      indices[i*12+1] = vi + 1;
+      indices[i*12+2] = vi + 2;
+
+      indices[i*12+3] = vi + 2;
+      indices[i*12+4] = vi + 1;
+      indices[i*12+5] = vi + 3;
 
       const fi = VERTICES + vi;
-      indices[i * 12 + 6] = fi + 2;
-      indices[i * 12 + 7] = fi + 1;
-      indices[i * 12 + 8] = fi + 0;
-      
-      indices[i * 12 + 9] = fi + 3;
-      indices[i * 12 + 10] = fi + 1;
-      indices[i * 12 + 11] = fi + 2;
+      indices[i*12+6] = fi + 2;
+      indices[i*12+7] = fi + 1;
+      indices[i*12+8] = fi + 0;
+
+      indices[i*12+9] = fi + 3;
+      indices[i*12+10] = fi + 1;
+      indices[i*12+11] = fi + 2;
     }
 
-    const NUM_GRASS = 1;
     const geo = new THREE.InstancedBufferGeometry();
-    geo.setIndex(indices)
+    geo.instanceCount = NUM_GRASS;
+    geo.setIndex(indices);
     geo.boundingSphere = new THREE.Sphere(
         new THREE.Vector3(0, 0, 0),
-      1000);
+        1 + GRASS_PATCH_SIZE * 2);
 
     return geo;
   }
 
   async setupProject_() {
-    const sky = await fetch('./shaders/sky.glsl');
     const vshSky = await fetch('./shaders/sky-vertex-shader.glsl');
     const fshSky = await fetch('./shaders/sky-fragment-shader.glsl');
+    const vshGrass = await fetch('./shaders/grass-vertex-shader.glsl');
+    const fshGrass = await fetch('./shaders/grass-fragment-shader.glsl');
     const vshGround = await fetch('./shaders/ground-vertex-shader.glsl');
     const fshGround = await fetch('./shaders/ground-fragment-shader.glsl');
 
-    const skyText = await sky.text();
     const vshSkyText = await vshSky.text();
     const fshSkyText = await fshSky.text();
+    const vshGrassText = await vshGrass.text();
+    const fshGrassText = await fshGrass.text();
     const vshGroundText = await vshGround.text();
     const fshGroundText = await fshGround.text();
 
@@ -119,7 +127,7 @@ class SimonDevGLSLCourse {
           resolution: { value: new THREE.Vector2(1, 1) },
         },
         vertexShader: vshSkyText,
-        fragmentShader: skyText + fshSkyText,
+        fragmentShader: fshSkyText,
         side: THREE.BackSide
       });
   
@@ -130,6 +138,27 @@ class SimonDevGLSLCourse {
     this.scene_.add(this.sky_);
     this.materials_.push(skyMat);
 
+    // Grass
+    const uniforms = {
+      grassParams: { value: new THREE.Vector4(
+          GRASS_SEGMENTS, GRASS_PATCH_SIZE, GRASS_WIDTH, GRASS_HEIGHT)
+      },
+      time: { value: 0 },
+      resolution: { value: new THREE.Vector2(1, 1) },
+    };
+
+    const grassMaterial = new THREE.ShaderMaterial({
+      uniforms: uniforms,
+      vertexShader: vshGrassText,
+      fragmentShader: fshGrassText,
+      side: THREE.FrontSide,
+    });
+    this.grassGeometry_ = this.CreateGeometry_(GRASS_SEGMENTS);
+    this.grassMesh_ = new THREE.Mesh(this.grassGeometry_, grassMaterial);
+    this.grassMesh_.position.set(0, 0, 0);
+    this.scene_.add(this.grassMesh_);
+
+    this.materials_.push(grassMaterial);
 
     this.totalTime_ = 0;
     this.onWindowResize_();

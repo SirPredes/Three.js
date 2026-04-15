@@ -14,6 +14,7 @@ export default defineConfig({
         sourcemap: true,
     },
     server: {
+        host: true,
         port: 5200,
         hmr: {
             clientPort: 5200,
